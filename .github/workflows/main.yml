@@ -1,4 +1,4 @@
-name: Recovery Build A05
+name: Recovery Build Xiaomi 12X
 
 on:
   workflow_dispatch:
@@ -14,35 +14,39 @@ on:
       DEVICE_TREE_URL:
         description: 'DEVICE_TREE_URL'
         required: true
-        default: 'https://github.com/rsuntk/twrp_samsung_a05m-6.6.git'
+        default: 'https://github.com/Verevka/twrp_device_xiaomi_psyche.git'
       DEVICE_TREE_BRANCH:
         description: 'DEVICE_TREE_BRANCH'
         required: true
-        default: 'master'
+        default: 'twrp-12.1'
       DEVICE_PATH:
         description: 'DEVICE_PATH'
         required: true
-        default: 'device/samsung/a05m'
-      COMMON_TREE_URL:
-        description: 'COMMON_TREE_URL (if no common tree, leave blank)'
-        required: false
-        default: 'https://github.com/rsuntk/twrp_samsung_mt6768-common.git'
-      COMMON_PATH:
-        description: 'COMMON_PATH (if no common tree, leave blank)'
-        required: false
-        default: 'device/samsung/jdm-mt6768-cmn'
+        default: 'device/xiaomi/psyche'
+      KERNEL_TREE_URL:
+        description: 'KERNEL_TREE_URL'
+        required: true
+        default: 'https://github.com/AOSPA/android_kernel_xiaomi_sm8250'
+      KERNEL_TREE_BRANCH:
+        description: 'KERNEL_TREE_BRANCH'
+        required: true
+        default: 'uvite'
+      KERNEL_PATH:
+        description: 'KERNEL_PATH'
+        required: true
+        default: 'kernel/xiaomi/psyche'
       DEVICE_NAME:
         description: 'DEVICE_NAME'
         required: true
-        default: 'a05m'
+        default: 'psyche'
       MAKEFILE_NAME:
         description: 'MAKEFILE_NAME'
         required: true
-        default: 'twrp_a05m'
+        default: 'twrp_psyche'
       BUILD_TARGET:
         description: 'BUILD_TARGET'
         required: true
-        default: 'recovery'
+        default: 'boot'
 
 jobs:
   build:
@@ -93,7 +97,7 @@ jobs:
     - name: Setup SSH Keys
       if: ${{ startsWith(github.event.inputs.MANIFEST_URL, 'git@github.com') || 
           startsWith(github.event.inputs.DEVICE_TREE_URL, 'git@github.com') ||
-          startsWith(github.event.inputs.COMMON_TREE_URL, 'git@github.com') }}
+          startsWith(github.event.inputs.KERNEL_TREE_URL, 'git@github.com') }}
       uses: webfactory/ssh-agent@v0.9.0
       with:
           ssh-private-key: |
@@ -111,8 +115,8 @@ jobs:
         mkdir workspace
         cd workspace
         echo "workspace-folder=$(pwd)" >> $GITHUB_OUTPUT
-        git config --global user.name "Nico170420"
-        git config --global user.email "b170420nc@gmail.com"
+        git config --global user.name "Verevka"
+        git config --global user.email "verevka86@gmail.com"
         repo init --depth=1 -u ${{ github.event.inputs.MANIFEST_URL }} -b ${{ github.event.inputs.MANIFEST_BRANCH }}
       id: pwd
 
@@ -126,12 +130,12 @@ jobs:
         git clone ${{ github.event.inputs.DEVICE_TREE_URL }} -b ${{ github.event.inputs.DEVICE_TREE_BRANCH }} ./${{ github.event.inputs.DEVICE_PATH }}
       working-directory: ${{ steps.pwd.outputs.workspace-folder }}
 
-    - name: Clone common tree
+    - name: Clone kernel tree
       if: |
-        github.event.inputs.COMMON_TREE_URL != null
-        && github.event.inputs.COMMON_PATH != null
+        github.event.inputs.KERNEL_TREE_URL != null
+        && github.event.inputs.KERNEL_PATH != null
       run: |
-        git clone ${{ github.event.inputs.COMMON_TREE_URL }} -b ${{ github.event.inputs.DEVICE_TREE_BRANCH }} ./${{ github.event.inputs.COMMON_PATH }}
+        git clone ${{ github.event.inputs.KERNEL_TREE_URL }} -b ${{ github.event.inputs.KERNEL_TREE_BRANCH }} ./${{ github.event.inputs.KERNEL_PATH }}
       working-directory: ${{ steps.pwd.outputs.workspace-folder }}
 
     - name: Check Build Tree
@@ -144,8 +148,7 @@ jobs:
 
     - name: Sync Device Dependencies
       run: |
-        bash ${GITHUB_WORKSPACE}/scripts/convert.sh ${{ github.event.inputs.DEVICE_PATH }}/${{ steps.buildtree.outputs.value }}.dependencies
-        repo sync -j$(nproc --all)
+        git clone https://github.com/Verevka/proton-clang --depth=1 prebuilts/clang/host/linux-x86/clang-13.0.0
       working-directory: ${{ steps.pwd.outputs.workspace-folder }}
       continue-on-error: true
 
@@ -158,7 +161,7 @@ jobs:
       run: |
         source build/envsetup.sh
         export ALLOW_MISSING_DEPENDENCIES=true
-        lunch ${{ github.event.inputs.MAKEFILE_NAME }}-userdebug && make clean && make ${{ github.event.inputs.BUILD_TARGET }}image -j$(nproc --all)
+        lunch ${{ github.event.inputs.MAKEFILE_NAME }}-eng && make clean && mka adbd ${{ github.event.inputs.BUILD_TARGET }}image -j$(nproc --all)
         #if [ -d $(pwd)/out ]; then
         #	cd out/target/product/${{ github.event.inputs.DEVICE_NAME }}
         #	tar -cvf ${{ github.event.inputs.BUILD_TARGET }}.img.tar ${{ github.event.inputs.BUILD_TARGET }}.img
