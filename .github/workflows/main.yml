@@ -26,11 +26,11 @@ on:
       KERNEL_TREE_URL:
         description: 'KERNEL_TREE_URL'
         required: true
-        default: 'https://github.com/AOSPA/android_kernel_xiaomi_sm8250'
+        default: 'https://github.com/MistOS-psyche/kernel_xiaomi_sm8250.git'
       KERNEL_TREE_BRANCH:
         description: 'KERNEL_TREE_BRANCH'
         required: true
-        default: 'uvite'
+        default: 'aosp-16'
       KERNEL_PATH:
         description: 'KERNEL_PATH'
         required: true
