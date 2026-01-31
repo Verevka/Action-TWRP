@@ -23,6 +23,14 @@ on:
         description: 'DEVICE_PATH'
         required: true
         default: 'device/xiaomi/psyche'
+      DOWNLOAD_KERNEL:
+        description: 'Whether to download kernel sources (true/false). If false, kernel compilation will be skipped.'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
       KERNEL_TREE_URL:
         description: 'KERNEL_TREE_URL'
         required: true
@@ -63,6 +71,7 @@ jobs:
         echo "Device Tree URL: ${{ github.event.inputs.DEVICE_TREE_URL }}"
         echo "Device Tree Branch: ${{ github.event.inputs.DEVICE_TREE_BRANCH }}"
         echo "Device Path: ${{ github.event.inputs.DEVICE_PATH }}"
+        echo "Download Kernel: ${{ github.event.inputs.DOWNLOAD_KERNEL }}"
         echo "Device Name: ${{ github.event.inputs.DEVICE_NAME }}"
         echo "Makefile Name: ${{ github.event.inputs.MAKEFILE_NAME }}"
         echo "Build Target: ${{ github.event.inputs.BUILD_TARGET }}.img"
@@ -131,11 +140,13 @@ jobs:
       working-directory: ${{ steps.pwd.outputs.workspace-folder }}
 
     - name: Clone kernel tree
-      if: |
-        github.event.inputs.KERNEL_TREE_URL != null
-        && github.event.inputs.KERNEL_PATH != null
+      if: ${{ github.event.inputs.DOWNLOAD_KERNEL == 'true' &&
+            github.event.inputs.KERNEL_TREE_URL != '' &&
+            github.event.inputs.KERNEL_PATH != '' }}
       run: |
-        git clone  --recurse-submodules ${{ github.event.inputs.KERNEL_TREE_URL }} -b ${{ github.event.inputs.KERNEL_TREE_BRANCH }} ./${{ github.event.inputs.KERNEL_PATH }}
+        git clone --recurse-submodules ${{ github.event.inputs.KERNEL_TREE_URL }} \
+          -b ${{ github.event.inputs.KERNEL_TREE_BRANCH }} \
+          ./${{ github.event.inputs.KERNEL_PATH }}
       working-directory: ${{ steps.pwd.outputs.workspace-folder }}
 
     - name: Check Build Tree
@@ -147,6 +158,7 @@ jobs:
         if_false: omni
 
     - name: Sync Device Dependencies
+      if: ${{ github.event.inputs.DOWNLOAD_KERNEL == 'true' }}
       run: |
         git clone https://github.com/Verevka/proton-clang --depth=1 prebuilts/clang/host/linux-x86/clang-13.0.0
       working-directory: ${{ steps.pwd.outputs.workspace-folder }}
